@@ -7,6 +7,7 @@
 #include "led_digits.h"
 #include "timer16.h"
 #include "timer32.h"
+#include "power_mgr.h"
 
 #include <cr_section_macros.h>
 #include <NXP/crp.h>
@@ -54,6 +55,206 @@ void init_timers() {
     LPC_SYSCON->SYSAHBCLKCTRL |= (1<<10);
 }
 
+
+int8_t get_char_to_int(uint8_t ch) {
+	if (ch >= '0' && ch <= '9') {
+		return ch - '0';
+	}
+	return -1;
+}
+
+
+void signal_boot_up() {
+   led_digits_set_value(0);
+   led_digits_set_blink(0);
+   led_red_set(0);
+   led_green_set(1);
+   led_green_set_blink(1);
+   led_red_set_blink(1);
+}
+
+void signal_shutting_down() {
+   led_digits_set_blink(0);
+   led_digits_enable();
+   led_green_set(0);
+   led_green_set_blink(0);
+   led_red_set(1);
+   led_red_set_blink(1);
+}
+
+void main_process_barcode() {
+    if (barcode_is_data_available()) {
+ 	   uint8_t counter;
+ 	   // begin message
+ 	   logger_logString("/B:");
+ 	   for(counter = 0; counter < barcode_data_count; counter++) {
+ 		   logger_logByte(barcode_data[counter]);
+ 	   }
+ 	   logger_logCRLF();
+ 	   // this is important!
+ 	   barcode_reset();
+    }
+
+    if (barcode_is_error()) {
+ 	   logger_logString("/E:");
+ 	   logger_logNumber(barcode_get_error_code());
+ 	   logger_logCRLF();
+ 	   barcode_reset();
+    }
+}
+
+void main_process_buttons() {
+
+    // ON/OFF
+    if (buttons_triggered(0)) {
+ 	   // on/off
+       if (power_mgr_get_player_status() == 0) {
+    	   // power on
+    	   power_mgr_set_player(1);
+    	   power_mgr_set_amp(1);
+    	   signal_boot_up();
+       }
+       else {
+     	   logger_logString("/S:");
+     	   logger_logByte('0');
+     	   logger_logByte('0');
+     	   logger_logCRLF();
+       }
+    }
+
+    // PREV
+    if (buttons_triggered(1)) {
+ 	   // on/off
+ 	   logger_logString("/S:");
+ 	   logger_logByte('1');
+ 	   logger_logByte('0');
+ 	   logger_logCRLF();
+    }
+
+    // PLAY/PAUSE
+    if (buttons_triggered(2)) {
+ 	   // on/off
+ 	   logger_logString("/S:");
+ 	   logger_logByte('2');
+ 	   logger_logByte('0');
+ 	   logger_logCRLF();
+    }
+
+    // NEXT
+    if (buttons_triggered(3)) {
+ 	   // on/off
+        logger_logString("/S:");
+ 	   logger_logByte('3');
+ 	   logger_logByte('0');
+ 	   logger_logCRLF();
+    }
+}
+
+void main_process_uart() {
+    if (UARTCount > 0 && UARTBuffer[UARTCount-1] == 0x0A) {
+ 	   // command structure:
+ 	   // [0] = '/' => identifier
+ 	   // [1] = <command>
+ 	   // [2] = ':' => separator
+ 	   // [3] = <param1>
+ 	   // [4] = <param2>
+ 	   // etc.
+ 	   // [n] = 0x0A
+
+ 	   if (UARTCount > 3 && UARTBuffer[0] == '/' && UARTBuffer[2] == ':') {
+ 		   uint8_t command = UARTBuffer[1];
+
+ 		   // heart beat message from player
+ 		   if (command == 'H') {
+ 			   led_digits_set_blink(0);
+ 			   led_digits_set_blink_interval(500);
+ 			   led_green_set_blink(0);
+ 			   led_red_set_blink(0);
+ 			   led_red_set(0);
+ 			   led_green_set(1);
+ 			   // send heart beat
+ 			   logger_logString("/H:0");
+ 			   logger_logCRLF();
+ 		   }
+
+ 		   // set led digits
+ 		   // e.g. /L:13 -> output 13
+ 		   if (command == 'L' && UARTCount > 5) {
+ 			   uint8_t digit1 = UARTBuffer[3];
+ 			   uint8_t digit0 = UARTBuffer[4];
+ 			   led_digits_set_value_by_chars(digit0, digit1);
+ 		   }
+
+ 		   // set led
+ 		   // "/l:R0" -> led red off
+ 		   // "/l:R1" -> led red on
+ 		   // "/l:R2" -> led red blink off
+ 		   // "/l:R3" -> led red blink on
+ 		   // "/l:G0" -> led green off
+ 		   // "/l:G1" -> led green on
+ 		   // "/l:G2" -> led green blink off
+ 		   // "/l:G3" -> led green blink on
+ 		   if (command == 'l' && UARTCount > 5) {
+ 			   uint8_t param1 = UARTBuffer[3];
+ 			   uint8_t param2 = UARTBuffer[4];
+ 			   if (param1 == 'R') {
+ 				   switch (param2) {
+ 				   case 0 : led_red_set(0); break;
+ 				   case 1 : led_red_set(1); break;
+ 				   case 2 : led_red_set_blink(0); break;
+ 				   case 3 : led_red_set_blink(1); break;
+ 				   }
+ 			   }
+ 			   if (param1 == 'G') {
+ 				   switch (param2) {
+ 				   case 0 : led_green_set(0); break;
+ 				   case 1 : led_green_set(1); break;
+ 				   case 2 : led_green_set_blink(0); break;
+ 				   case 3 : led_green_set_blink(1); break;
+ 				   }
+ 			   }
+ 		   }
+
+
+ 		   // shutdown message
+ 		   // message '/S:xx'
+ 		   // e.g. '/S:30' shutdown in 30 seconds
+ 		   if (command == 'S' && UARTCount > 5) {
+ 			   // do somegthing
+ 			   int8_t param1 = get_char_to_int(UARTBuffer[3]);
+ 			   int8_t param2 = get_char_to_int(UARTBuffer[4]);
+ 			   if (param1 > -1 && param2 > -1) {
+ 				   signal_shutting_down();
+ 				   int8_t seconds = param1*10 + param2;
+ 				   power_mgr_shutdown_player(seconds);
+ 			   }
+ 		   }
+
+
+ 		   // message blink digits
+ 		   if (command == 'D' && UARTCount > 4) {
+ 			   uint8_t param1 = UARTBuffer[3];
+ 			   // do somegthing
+ 			   if (param1 == '1') {
+ 				   led_digits_set_blink(1);
+ 			   }
+ 			   else {
+ 				   led_digits_set_blink(0);
+ 			   }
+ 			   /*
+ 			   // e.g. '/D:15'
+ 			   if (UARTCount >= 5 && UARTBuffer[4] >= '0' && UARTBuffer[4] <= '9') {
+ 				   uint16_t interval = 100 * UARTBuffer[4];
+ 				   led_digits_set_blink_interval(interval);
+ 			   }
+ 			   */
+ 		   }
+ 	   }
+ 	   UARTCount = 0;
+    }
+}
+
+
 /*****************************************************************************
 **   Main Function  main()
 ******************************************************************************/
@@ -93,12 +294,11 @@ int main (void) {
 
 
    // check for 'next' button
-   if (GPIOGetValue(0,6)) {
+   if (GPIOGetValue(0, 6)) {
 	   led_digits_init();
 	   //led_digits_set_blink(1);
 	   led_red_set(1);
 	   led_green_set(1);
-	   led_green_set_blink(1);
    }
    else {
 	   GPIOSetValue( 0, 7, 1 );
@@ -126,70 +326,29 @@ int main (void) {
    NVIC_EnableIRQ(UART_IRQn);
    LPC_UART->IER = IER_RBR | IER_RLS;
 
-
    logger_setEnabled(1);
    logger_logStringln("/O:entering main loop..."); // send online message (means i'm online)
-
-   /*
-	GPIOSetValue( PORT1, 4, 0 );
-	GPIOSetValue( PORT1, 11, 0 );
-    //delay32Ms(0,2000);
-    delay_clk(0,50000);
-	GPIOSetValue( PORT1, 4, 1 );
-	GPIOSetValue( PORT1, 11, 1 );*/
-
-   /*
-   UARTSendByte('1');
-
-
-	//GPIOSetValue( PORT1, 4, 1 );
-	GPIOSetValue( PORT1, 11, 1 );
-
-	   UARTSendByte('2');
-	delay32Ms(0,500);
-	   UARTSendByte('3');
-	GPIOSetValue( PORT1, 4, 0 );
-	GPIOSetValue( PORT1, 11, 0 );
-	delay32Ms(0,500);
-	   UARTSendByte('4');
-
-	GPIOSetValue( PORT1, 0, 0 );
-	GPIOSetValue( PORT1, 1, 1 );
-	GPIOSetValue( PORT1, 2, 1 );
-	GPIOSetValue( PORT1, 3, 0 );
-	delay32Ms(0,500);
-	   UARTSendByte('5');
-
-
-
-   //led_digits_set_value(11);
-   delay32Ms(0,2000);
-   UARTSendByte('6'); */
-
-   //led_digits_disable();
-
 
    uint8_t counter = 0;
    for(counter = 0; counter < 100; counter++) {
 	   led_digits_set_value(counter);
-	   //delay_microseconds(1, 50000);
 	   delay32Ms(0, 20);
    }
 
    for(counter = 0; counter < 10; counter++) {
-	   led_digits_set_value(counter);
 	   led_digits_set_value_by_chars('0' + counter, '0' + counter);
-	   //delay_microseconds(1, 50000);
 	   delay32Ms(0, 200);
    }
+   delay32Ms(0, 200);
+   //led_digits_disable();
 
-   delay32Ms(0,500);
-   led_digits_set_value(0);
-   led_red_set(0);
+   signal_boot_up();
 
+   int8_t last_remaining_seconds = -1;
    while (1) {
-      /* process logger */
-      if (logger_dataAvailable() && UARTTxEmpty) {
+
+       /* process logger */
+       if (logger_dataAvailable() && UARTTxEmpty) {
          uint8_t iCounter;
          // fill transmit FIFO with 14 bytes
          for (iCounter = 0; iCounter < 14 && logger_dataAvailable(); iCounter++) {
@@ -203,120 +362,26 @@ int main (void) {
 
        led_digits_process(msTicks);
 
-       if (barcode_is_data_available()) {
-    	   uint8_t counter;
-    	   // begin message
-    	   logger_logString("/B:");
-    	   for(counter = 0; counter < barcode_data_count; counter++) {
-    		   logger_logByte(barcode_data[counter]);
-    	   }
-    	   logger_logCRLF();
-    	   // this is important!
-    	   barcode_reset();
-       }
+	   if (power_mgr_is_shutting_down()) {
+		   if (power_mgr_get_remaining_player_seconds() != last_remaining_seconds) {
+			   last_remaining_seconds = power_mgr_get_remaining_player_seconds();
+			   led_digits_set_value(last_remaining_seconds);
+		   }
+		   if (last_remaining_seconds == 0) {
+			   led_green_set(0);
+			   led_red_set(1);
+			   led_digits_disable();
+		   }
+		   continue;
+	   }
 
-       if (barcode_is_error()) {
-    	   logger_logString("/E:");
-    	   logger_logNumber(barcode_get_error_code());
-    	   logger_logCRLF();
-    	   barcode_reset();
-       }
+       main_process_barcode();
 
+       main_process_buttons();
 
-       if (buttons_triggered(0)) {
-    	   // on/off
-    	   logger_logString("/S:");
-    	   logger_logByte('0');
-    	   logger_logByte('0');
-    	   logger_logCRLF();
-       }
+       main_process_uart();
 
-       if (buttons_triggered(1)) {
-    	   // on/off
-    	   logger_logString("/S:");
-    	   logger_logByte('1');
-    	   logger_logByte('0');
-    	   logger_logCRLF();
-       }
-
-       if (buttons_triggered(2)) {
-    	   // on/off
-    	   logger_logString("/S:");
-    	   logger_logByte('2');
-    	   logger_logByte('0');
-    	   logger_logCRLF();
-       }
-
-       if (buttons_triggered(3)) {
-    	   // on/off
-           logger_logString("/S:");
-    	   logger_logByte('3');
-    	   logger_logByte('0');
-    	   logger_logCRLF();
-       }
-
-       if (UARTCount != 0 && UARTBuffer[UARTCount-1] == 0x0A && UARTCount >= 3) {
-
-    	   // command structure:
-    	   // [0] = '/' => identifier
-    	   // [1] = <command>
-    	   // [2] = ':' => separator
-    	   // [3] = <param1>
-    	   // [4] = <param2>
-    	   // etc.
-
-    	   if (UARTBuffer[0] == '/' && UARTBuffer[2] == ':') {
-    		   // heart beat message
-    		   if (UARTBuffer[1] == 'H') {
-    			   // do somegthing
-    			   led_digits_set_blink(0);
-    			   led_digits_set_blink_interval(500);
-    			   led_green_set_blink(0);
-    			   led_green_set(1);
-    			   // send heart beat
-    			   logger_logString("/H:0");
-    			   logger_logCRLF();
-    		   }
-    		   // set led digits
-    		   // e.g. /L:13 -> output 13
-    		   if (UARTCount >= 5 && UARTBuffer[1] == 'L') {
-    			   uint8_t digit1 = UARTBuffer[3];
-    			   uint8_t digit0 = UARTBuffer[4];
-    			   led_digits_set_value_by_chars(digit0, digit1);
-    		   }
-    		   // RPI is online
-    		   // message '/O:'
-    		   if (UARTBuffer[1] == 'O') {
-    			   // do somegthing
-    			   led_digits_set_blink(0);
-    			   led_digits_set_blink_interval(500);
-    		   }
-    		   // shutdown message
-    		   // message '/S:xx'
-    		   // e.g. '/S:30' shutdown in 30 seconds
-    		   if (UARTBuffer[1] == 'S') {
-    			   // do somegthing
-    		   }
-    		   // message blink digits
-    		   if (UARTCount >= 4 && UARTBuffer[1] == 'D') {
-    			   // do somegthing
-    			   if (UARTBuffer[3] == '1') {
-    				   led_digits_set_blink(1);
-    			   }
-    			   else {
-    				   led_digits_set_blink(0);
-    			   }
-    			   // e.g. '/D:15'
-    			   if (UARTCount >= 5 && UARTBuffer[4] >= '0' && UARTBuffer[4] <= '9') {
-    				   uint16_t interval = 100 * UARTBuffer[4];
-    				   led_digits_set_blink_interval(interval);
-    			   }
-    		   }
-    	   }
-    	   UARTCount = 0;
-       }
-
-	}
+   }
 }
 
 /*********************************************************************************
