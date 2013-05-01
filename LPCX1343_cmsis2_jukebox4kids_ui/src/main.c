@@ -247,9 +247,9 @@ void main_process_uart() {
  		   if (command == 'D' && UARTCount > 4) {
  			   uint8_t param1 = UARTBuffer[3];
 			   switch (param1) {
-			   case '0' : led_digits_disable(); break;
-			   case '1' : led_digits_enable(); break;
-			   case '2' : led_digits_set_blink(0); break;
+			   case '0' : led_digits_disable(); led_digits_set_blink(0); break;
+			   case '1' : led_digits_enable(); led_digits_set_blink(0); break;
+			   case '2' : led_digits_set_blink(0); led_digits_enable(); break;
 			   case '3' : led_digits_set_blink(1); break;
 			   }
 
@@ -333,6 +333,7 @@ int main (void) {
    // check for 'next' button
    if (GPIOGetValue(0, 6)) {
 	   led_digits_init();
+	   led_digits_enable();
 	   //led_digits_set_blink(1);
 	   led_red_set(1);
 	   led_green_set(1);
@@ -377,7 +378,7 @@ int main (void) {
 	   delay32Ms(0, 200);
    }
    delay32Ms(0, 200);
-   //led_digits_disable();
+   led_digits_enable();
 
    signal_boot_up();
 
