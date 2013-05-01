@@ -29,12 +29,17 @@ void led_digits_init() {
    LPC_IOCON->SWDIO_PIO1_3 &= ~0x07;
    LPC_IOCON->SWDIO_PIO1_3 |= 0x01; /* GPIO */
 
+   LPC_IOCON->R_PIO0_11 &= ~0x07;
+   LPC_IOCON->R_PIO0_11 |= 0x01; /* GPIO */
+
    GPIOSetDir( LED_DIGITS_PORT, LED_DIGITS_PIN_A, 1 );
    GPIOSetDir( LED_DIGITS_PORT, LED_DIGITS_PIN_B, 1 );
    GPIOSetDir( LED_DIGITS_PORT, LED_DIGITS_PIN_C, 1 );
    GPIOSetDir( LED_DIGITS_PORT, LED_DIGITS_PIN_D, 1 );
    GPIOSetDir( LED_DIGITS_PORT, LED_DIGITS_PIN_L0, 1 );
    GPIOSetDir( LED_DIGITS_PORT, LED_DIGITS_PIN_L1, 1 );
+   GPIOSetDir( LED_DGITIS_PORT_BL, LED_DIGITS_PIN_BL, 1);
+
    GPIOSetValue( LED_DIGITS_PORT, LED_DIGITS_PIN_L0, 1 );
    GPIOSetValue( LED_DIGITS_PORT, LED_DIGITS_PIN_L1, 1 );
 
@@ -43,6 +48,8 @@ void led_digits_init() {
    GPIOSetDir( LED_GREEN_PORT, LED_GREEN_PIN, 1);
    GPIOSetValue( LED_GREEN_PORT, LED_GREEN_PIN, 0);
 
+   // set
+   GPIOSetValue( LED_DGITIS_PORT_BL, LED_DIGITS_PIN_BL, 1);
 
    led_digits_initialized = 1;
 }
@@ -87,12 +94,11 @@ void led_digits_set_value(uint8_t value) {
 
 
 void led_digits_enable() {
-	led_digits_set_value(led_digits_current_value);
+	GPIOSetValue( LED_DGITIS_PORT_BL, LED_DIGITS_PIN_BL, 1);
 }
 
 void led_digits_disable() {
-	led_digits_set_digit0(10);
-	led_digits_set_digit1(10);
+	GPIOSetValue( LED_DGITIS_PORT_BL, LED_DIGITS_PIN_BL, 0);
 }
 
 void led_digits_set_value_by_chars(uint8_t ch0, uint8_t ch1) {
