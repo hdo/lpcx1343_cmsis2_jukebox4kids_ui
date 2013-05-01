@@ -36,6 +36,11 @@ extern volatile uint8_t barcode_data_count;
 
 
 volatile uint32_t msTicks;                          /* counts 10ms timeTicks */
+
+uint8_t last_digit_0 = 0;
+uint8_t last_digit_1 = 0;
+
+
 /*----------------------------------------------------------------------------
   SysTick_Handler
  *----------------------------------------------------------------------------*/
@@ -182,6 +187,13 @@ void main_process_uart() {
  		   if (command == 'L' && UARTCount > 5) {
  			   uint8_t digit1 = UARTBuffer[3];
  			   uint8_t digit0 = UARTBuffer[4];
+ 			   // update only if new
+ 			   /*
+ 			   if (digit0 != last_digit_0 || digit1 != last_digit_1) {
+ 				   last_digit_0 = digit0;
+ 				   last_digit_1 = digit1;
+ 			   }
+ 			   */
  			   led_digits_set_value_by_chars(digit0, digit1);
  		   }
 
@@ -199,18 +211,18 @@ void main_process_uart() {
  			   uint8_t param2 = UARTBuffer[4];
  			   if (param1 == 'R') {
  				   switch (param2) {
- 				   case 0 : led_red_set(0); break;
- 				   case 1 : led_red_set(1); break;
- 				   case 2 : led_red_set_blink(0); break;
- 				   case 3 : led_red_set_blink(1); break;
+ 				   case '0' : led_red_set(0); break;
+ 				   case '1' : led_red_set(1); break;
+ 				   case '2' : led_red_set_blink(0); break;
+ 				   case '3' : led_red_set_blink(1); break;
  				   }
  			   }
  			   if (param1 == 'G') {
  				   switch (param2) {
- 				   case 0 : led_green_set(0); break;
- 				   case 1 : led_green_set(1); break;
- 				   case 2 : led_green_set_blink(0); break;
- 				   case 3 : led_green_set_blink(1); break;
+ 				   case '0' : led_green_set(0); break;
+ 				   case '1' : led_green_set(1); break;
+ 				   case '2' : led_green_set_blink(0); break;
+ 				   case '3' : led_green_set_blink(1); break;
  				   }
  			   }
  		   }
@@ -234,13 +246,13 @@ void main_process_uart() {
  		   // message blink digits
  		   if (command == 'D' && UARTCount > 4) {
  			   uint8_t param1 = UARTBuffer[3];
- 			   // do somegthing
- 			   if (param1 == '1') {
- 				   led_digits_set_blink(1);
- 			   }
- 			   else {
- 				   led_digits_set_blink(0);
- 			   }
+			   switch (param1) {
+			   case '0' : led_digits_disable(); break;
+			   case '1' : led_digits_enable(); break;
+			   case '2' : led_digits_set_blink(0); break;
+			   case '3' : led_digits_set_blink(1); break;
+			   }
+
  			   /*
  			   // e.g. '/D:15'
  			   if (UARTCount >= 5 && UARTBuffer[4] >= '0' && UARTBuffer[4] <= '9') {
@@ -249,6 +261,30 @@ void main_process_uart() {
  			   }
  			   */
  		   }
+
+ 		   // message power management control
+ 		   // "/P:P0" -> player off (use with care!)
+ 		   // "/P:P1" -> player on (obsolete)
+ 		   // "/P:A0" -> amp off
+ 		   // "/P:A1" -> amp on
+
+ 		   if (command == 'P' && UARTCount > 5) {
+ 			   uint8_t param1 = UARTBuffer[3];
+ 			   uint8_t param2 = UARTBuffer[4];
+ 			   if (param1 == 'P') {
+ 				   switch (param2) {
+ 				   case '0' : power_mgr_set_player(0); break;
+ 				   case '1' : power_mgr_set_player(1); break;
+ 				   }
+ 			   }
+ 			   if (param1 == 'A') {
+ 				   switch (param2) {
+ 				   case '0' : power_mgr_set_amp(0); break;
+ 				   case '1' : power_mgr_set_amp(1); break;
+ 				   }
+ 			   }
+ 		   }
+
  	   }
  	   UARTCount = 0;
     }
@@ -292,6 +328,7 @@ int main (void) {
    // buttons
    buttons_init();
 
+   power_mgr_init();
 
    // check for 'next' button
    if (GPIOGetValue(0, 6)) {
@@ -356,12 +393,16 @@ int main (void) {
          }
        }
 
+       power_mgr_process(msTicks);
+
        barcode_process(msTicks);
 
        buttons_process(msTicks);
 
        led_digits_process(msTicks);
 
+
+       /*
 	   if (power_mgr_is_shutting_down()) {
 		   if (power_mgr_get_remaining_player_seconds() != last_remaining_seconds) {
 			   last_remaining_seconds = power_mgr_get_remaining_player_seconds();
@@ -374,6 +415,8 @@ int main (void) {
 		   }
 		   continue;
 	   }
+	   */
+
 
        main_process_barcode();
 
