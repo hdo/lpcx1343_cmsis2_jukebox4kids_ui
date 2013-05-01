@@ -6,8 +6,8 @@
 
 uint32_t power_mgr_msticks = 0;
 uint32_t power_mgr_last_msticks = 0;
-int8_t power_mgr_remaining_player_seconds = 0;
-int8_t power_mgr_remaining_amp_seconds = 0;
+int8_t power_mgr_remaining_player_seconds = -1;
+int8_t power_mgr_remaining_amp_seconds = -1;
 
 
 void power_mgr_init() {
