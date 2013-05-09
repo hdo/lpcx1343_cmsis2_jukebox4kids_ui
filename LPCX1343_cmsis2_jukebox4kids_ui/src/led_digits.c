@@ -68,7 +68,6 @@ void led_digits_set_digit0(uint8_t value) {
 		GPIOSetValue( LED_DIGITS_PORT, LED_DIGITS_PIN_L0, 0 );
 
 		led_digits_set_digit_helper(value);
-		delay_microseconds(0,5);
 
 		GPIOSetValue( LED_DIGITS_PORT, LED_DIGITS_PIN_L0, 1 );
 	}
@@ -80,7 +79,6 @@ void led_digits_set_digit1(uint8_t value) {
 		GPIOSetValue( LED_DIGITS_PORT, LED_DIGITS_PIN_L1, 0 );
 
 		led_digits_set_digit_helper(value);
-		delay_microseconds(0,5);
 
 		GPIOSetValue( LED_DIGITS_PORT, LED_DIGITS_PIN_L1, 1 );
 	}
