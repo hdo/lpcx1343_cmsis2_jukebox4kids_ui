@@ -77,15 +77,7 @@ uint8_t barcode_get_error_code() {
 }
 
 
-/**
- * It's important to define the correct interrupt handler here (e.g. in this example PORT0 is used)
- */
-void PIOINT0_IRQHandler(void) {
-  uint32_t regVal;
-
-  regVal = GPIOIntStatus( BARCODE_PORT, BARCODE_CLK_PIN );
-
-  if ( regVal )  {
+void barcode_probe(void) {
 
 	  // delay 5us for debouncing (using TIMER1)
 	  delay_microseconds(1, 4);
@@ -168,8 +160,4 @@ void PIOINT0_IRQHandler(void) {
 			  barcode_temp_data = 0;
 		  }
 	  }
-
-	  GPIOIntClear( BARCODE_PORT, BARCODE_CLK_PIN );
-  }		
-  return;
 }

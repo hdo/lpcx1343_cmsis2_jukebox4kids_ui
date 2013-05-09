@@ -8,6 +8,7 @@
 #include "timer16.h"
 #include "timer32.h"
 #include "power_mgr.h"
+#include "ext_int.h"
 
 #include <cr_section_macros.h>
 #include <NXP/crp.h>

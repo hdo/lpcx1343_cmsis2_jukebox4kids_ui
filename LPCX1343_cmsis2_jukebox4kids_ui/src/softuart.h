@@ -3,9 +3,14 @@
 
 #define SOFTUART_BUFFER_SIZE 32
 
+#define SOFTUART_PORT    PORT0
+#define SOFTUART_RX_PIN  10
+//#define SOFTUART_TX_PIN 9
+
+
 void softuart_init();
 void softuart_start_bit();
-void softuart_probe(uint8_t value);
+void softuart_probe();
 void softuart_stop_bit();
 void softuart_reset();
 void softuart_enable();

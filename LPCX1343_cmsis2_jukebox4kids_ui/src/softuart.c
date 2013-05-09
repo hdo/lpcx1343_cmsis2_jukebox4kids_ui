@@ -18,7 +18,7 @@ void softuart_start_bit() {
 
 }
 
-void softuart_probe(uint8_t value) {
+void softuart_probe() {
 
 }
 
