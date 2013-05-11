@@ -41,3 +41,7 @@ void softuart_disable() {
 void softuart_process(uint32_t msticks) {
 
 }
+
+void softuart_sample() {
+
+}

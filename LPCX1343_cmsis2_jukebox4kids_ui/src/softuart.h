@@ -16,6 +16,7 @@ void softuart_reset();
 void softuart_enable();
 void softuart_disable();
 void softuart_process(uint32_t msticks);
+void softuart_sample();
 
 #endif /* end __SOFTUART_H */
 /*****************************************************************************

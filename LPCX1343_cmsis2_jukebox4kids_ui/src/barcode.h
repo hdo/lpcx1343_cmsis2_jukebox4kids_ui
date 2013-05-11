@@ -17,7 +17,7 @@ uint8_t barcode_read();
 uint8_t barcode_is_data_available();
 uint8_t barcode_is_error();
 uint8_t barcode_get_error_code();
-void barcode_probe();
+void barcode_sample();
 
 #endif /* end __BARCODE_H */
 /*****************************************************************************

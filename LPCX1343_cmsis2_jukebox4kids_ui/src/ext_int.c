@@ -10,14 +10,14 @@
 void PIOINT0_IRQHandler(void) {
 
 	if ( GPIOIntStatus( BARCODE_PORT, BARCODE_CLK_PIN ) )  {
-		barcode_probe();
+		barcode_sample();
 		GPIOIntClear( BARCODE_PORT, BARCODE_CLK_PIN );
 	}
 
 	if ( GPIOIntStatus( SOFTUART_PORT, SOFTUART_RX_PIN ) )  {
 
 		// start receiving bits
-		//
+		// init timer0 for soft uart reading here
 
 		GPIOIntClear( SOFTUART_PORT, SOFTUART_RX_PIN );
 	}

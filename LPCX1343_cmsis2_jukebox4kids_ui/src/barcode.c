@@ -77,7 +77,7 @@ uint8_t barcode_get_error_code() {
 }
 
 
-void barcode_probe(void) {
+void barcode_sample(void) {
 
 	  // delay 5us for debouncing (using TIMER1)
 	  delay_microseconds(1, 4);
