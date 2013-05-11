@@ -9,10 +9,10 @@
 
 
 void softuart_init();
-void softuart_start_bit();
 void softuart_probe();
-void softuart_stop_bit();
 void softuart_reset();
+void softuart_clear();
+void softuart_start();
 void softuart_enable();
 void softuart_disable();
 void softuart_process(uint32_t msticks);

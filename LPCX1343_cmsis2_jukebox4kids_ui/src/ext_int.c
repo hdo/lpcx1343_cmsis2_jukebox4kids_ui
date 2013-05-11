@@ -17,7 +17,7 @@ void PIOINT0_IRQHandler(void) {
 	if ( GPIOIntStatus( SOFTUART_PORT, SOFTUART_RX_PIN ) )  {
 
 		// start receiving bits
-		// init timer0 for soft uart reading here
+		softuart_start();
 
 		GPIOIntClear( SOFTUART_PORT, SOFTUART_RX_PIN );
 	}
