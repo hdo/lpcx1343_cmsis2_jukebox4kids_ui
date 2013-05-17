@@ -8,6 +8,7 @@
 #include "timer16.h"
 #include "timer32.h"
 #include "power_mgr.h"
+#include "rdm630.h"
 #include "ext_int.h"
 
 #include <cr_section_macros.h>
@@ -106,6 +107,15 @@ void main_process_barcode() {
  	   logger_logNumber(barcode_get_error_code());
  	   logger_logCRLF();
  	   barcode_reset();
+    }
+}
+
+void main_process_rfid() {
+    if (rdm630_data_available()) {
+	   uint32_t rfid_id = rdm630_read_rfid_id();
+ 	   logger_logString("/R:");
+	   logger_logNumberln(rfid_id);
+	   rdm630_reset();
     }
 }
 
@@ -359,6 +369,10 @@ int main (void) {
    barcode_init();
    barcode_reset();
 
+   // RFID reader
+   rdm630_init();
+   rdm630_reset();
+
    // UART
    UARTInit(115200);
    // Enable the UART Interrupt
@@ -399,6 +413,8 @@ int main (void) {
 
        barcode_process(msTicks);
 
+       rdm630_process(msTicks);
+
        buttons_process(msTicks);
 
        led_digits_process(msTicks);
@@ -421,6 +437,8 @@ int main (void) {
 
 
        main_process_barcode();
+
+       main_process_rfid();
 
        main_process_buttons();
 

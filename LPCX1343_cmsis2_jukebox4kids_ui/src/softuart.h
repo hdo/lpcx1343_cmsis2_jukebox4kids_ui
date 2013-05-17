@@ -4,8 +4,8 @@
 #define SOFTUART_BUFFER_SIZE 32
 
 #define SOFTUART_PORT    PORT0
-//#define SOFTUART_RX_PIN  10
-#define SOFTUART_RX_PIN  6
+#define SOFTUART_RX_PIN  10
+//#define SOFTUART_RX_PIN  6
 //#define SOFTUART_TX_PIN 9
 
 typedef struct trigger_config {
